@@ -1,0 +1,990 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MentalMath Voice Trainer</title>
+<style>
+:root {
+  --bg: #F2F2F7; --card: #FFFFFF; --fg: #1C1C1E; --sub: #6B6B70;
+  --accent: #0068D9; --line: #D1D1D6; --fill: #E9E9EB;
+  --ok: #1F7A3A; --bad: #B3261E; --on-accent: #FFFFFF;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --card: #1C1C1E; --fg: #F2F2F7; --sub: #A1A1A6;
+    --accent: #4DA3FF; --line: #38383A; --fill: #2C2C2E;
+    --ok: #50D17A; --bad: #FF6B63; --on-accent: #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --card: #1C1C1E; --fg: #F2F2F7; --sub: #A1A1A6;
+  --accent: #4DA3FF; --line: #38383A; --fill: #2C2C2E;
+  --ok: #50D17A; --bad: #FF6B63; --on-accent: #000000;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 16px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  padding-top: 16px; padding-bottom: 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.screen { max-width: 560px; margin: 0 auto; }
+[hidden] { display: none !important; }
+h1 { font-size: 32px; font-weight: 700; margin: 4px 0 12px; }
+h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--sub); margin: 0 4px 6px; }
+.eyebrow, .cap { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--sub); margin: 0; }
+.sub { font-size: 13px; color: var(--sub); margin: 6px 0 0; }
+.note { font-size: 13px; color: var(--bad); min-height: 18px; margin: 0 4px 12px; }
+.card { background: var(--card); border-radius: 12px; padding: 12px 16px; margin: 0 0 20px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; }
+.row + .row { border-top: 1px solid var(--line); }
+.val { font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stack { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+input[type="range"] { width: 100%; accent-color: var(--accent); margin: 0; }
+select { font: inherit; color: var(--fg); background: transparent; border: 0; padding: 6px; }
+.seg { display: flex; background: var(--fill); border-radius: 9px; padding: 2px; position: relative; margin-top: 4px; }
+.seg label { flex: 1; text-align: center; padding: 8px 4px; border-radius: 7px; font-size: 14px; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--card); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.16); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+.switch {
+  appearance: none; -webkit-appearance: none; width: 51px; height: 31px; border-radius: 16px;
+  background: var(--fill); position: relative; flex: none; margin: 0; cursor: pointer; transition: background .2s;
+}
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #FFFFFF; box-shadow: 0 2px 4px rgba(0,0,0,.25); transition: transform .2s;
+}
+.switch:checked { background: #34C759; }
+.switch:checked::after { transform: translateX(20px); }
+.btn {
+  font: inherit; font-weight: 600; border: 0; border-radius: 12px; min-height: 52px; padding: 0 18px;
+  background: var(--card); color: var(--accent); cursor: pointer; width: 100%;
+}
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn:focus-visible, .key:focus-visible, .link:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.link { font: inherit; font-size: 17px; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 8px 4px; min-height: 44px; }
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tag { font-size: 12px; font-weight: 600; background: var(--fill); border-radius: 999px; padding: 6px 10px; }
+.count { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+progress { width: 100%; height: 6px; accent-color: var(--accent); margin: 4px 0 20px; }
+.problem { text-align: center; padding: 24px 16px; margin-bottom: 16px; }
+.eq { font-size: clamp(36px, 12vw, 56px); font-weight: 300; font-variant-numeric: tabular-nums; margin: 10px 0 0; white-space: nowrap; overflow: hidden; }
+.answer {
+  margin: 0 auto; width: 220px; height: 72px; border-radius: 14px; background: var(--card);
+  border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center;
+  font-size: 44px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.answer.shake { animation: shake .4s linear; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); } 40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); } 80% { transform: translateX(6px); }
+}
+.fb { text-align: center; font-size: 14px; font-weight: 600; min-height: 22px; margin: 12px 0 14px; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 360px; margin: 0 auto; }
+.key {
+  font: inherit; font-size: 24px; font-weight: 500; min-height: 56px; border: 0; border-radius: 10px;
+  background: var(--card); color: var(--fg); cursor: pointer;
+}
+.key.fn { background: var(--line); }
+.voice { text-align: center; }
+.orb { position: relative; width: 120px; height: 120px; margin: 12px auto 0; display: flex; align-items: center; justify-content: center; }
+.orb .ring {
+  position: absolute; width: 120px; height: 120px; border-radius: 50%; background: var(--accent); opacity: .35;
+  animation: ring 2.4s ease-out infinite;
+}
+.orb .mic {
+  position: relative; width: 96px; height: 96px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.orb .mic svg { width: 36px; height: 36px; stroke: var(--on-accent); fill: none; stroke-width: 2; stroke-linecap: round; }
+@keyframes ring { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(1.7); opacity: 0; } }
+.wave { display: flex; justify-content: center; align-items: center; gap: 6px; height: 40px; margin: 14px 0 0; }
+.wave span { width: 5px; height: 36px; border-radius: 3px; background: var(--accent); animation: wave 1.1s ease-in-out infinite; }
+.wave span:nth-child(2) { animation-delay: .15s; } .wave span:nth-child(3) { animation-delay: .3s; }
+.wave span:nth-child(4) { animation-delay: .45s; } .wave span:nth-child(5) { animation-delay: .6s; }
+@keyframes wave { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+.say { font-size: 17px; font-weight: 600; margin: 18px 0 4px; }
+.voice .btn { width: auto; margin-top: 12px; background: transparent; }
+.rating { display: flex; align-items: center; gap: 16px; }
+.medal {
+  width: 80px; height: 80px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
+  font-size: 34px; font-weight: 700; color: var(--on-accent); background: var(--accent);
+}
+.big { font-size: 28px; font-weight: 700; margin: 2px 0 0; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.stats .card { margin: 0; padding: 14px; }
+.stats .num { display: block; font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 4px; }
+.bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; margin-top: 12px; border-bottom: 1px solid var(--line); }
+.bars div { flex: 1; min-width: 0; background: var(--accent); border-radius: 4px 4px 0 0; }
+.actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper .num {
+  width: 96px; font: inherit; font-weight: 600; color: var(--fg); text-align: center;
+  background: var(--fill); border: 0; border-radius: 8px; padding: 8px 4px;
+  font-variant-numeric: tabular-nums; -moz-appearance: textfield;
+}
+.stepper .num::-webkit-inner-spin-button, .stepper .num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.step {
+  font: inherit; font-size: 13px; font-weight: 600; min-width: 44px; min-height: 36px;
+  border: 0; border-radius: 8px; background: var(--fill); color: var(--accent); cursor: pointer;
+}
+.missed { margin: 8px 0 0; padding-left: 20px; }
+.missed li { margin: 6px 0; font-variant-numeric: tabular-nums; }
+.miss-you { color: var(--bad); font-weight: 600; }
+.miss-ok { color: var(--ok); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .orb .ring, .wave span, .answer.shake { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<main id="setup" class="screen">
+  <p class="eyebrow" data-i="eyebrow"></p>
+  <h1 data-i="appTitle"></h1>
+
+  <h2 data-i="language"></h2>
+  <div class="card">
+    <div class="row">
+      <span data-i="language"></span>
+      <select id="lang" aria-label="Language">
+        <option value="en">English</option>
+        <option value="it">Italiano</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+      </select>
+    </div>
+  </div>
+
+  <h2 data-i="operations"></h2>
+  <div class="card">
+    <div class="seg" role="radiogroup" aria-label="Operations">
+      <label><input type="radio" name="op" value="addition"><span data-i="addition"></span></label>
+      <label><input type="radio" name="op" value="subtraction"><span data-i="subtraction"></span></label>
+      <label><input type="radio" name="op" value="mixed" checked><span data-i="mixed"></span></label>
+    </div>
+    <p class="sub" data-i="mixedHint"></p>
+  </div>
+
+  <h2 data-i="numberRange"></h2>
+  <div class="card">
+    <div class="stack">
+      <div class="row"><label for="fMax" data-i="firstMax"></label><span class="stepper"><button type="button" class="step" data-for="fMax" data-step="-10">-10</button><input id="fMaxOut" class="num" type="number" min="-10000" max="10000" step="1" value="99" aria-label="First number, max"><button type="button" class="step" data-for="fMax" data-step="10">+10</button></span></div>
+      <input id="fMax" type="range" min="-10000" max="10000" step="1" value="99">
+    </div>
+    <div class="stack">
+      <div class="row"><label for="fMin" data-i="firstMin"></label><span class="stepper"><button type="button" class="step" data-for="fMin" data-step="-10">-10</button><input id="fMinOut" class="num" type="number" min="-10000" max="10000" step="1" value="0" aria-label="First number, min"><button type="button" class="step" data-for="fMin" data-step="10">+10</button></span></div>
+      <input id="fMin" type="range" min="-10000" max="10000" step="1" value="0">
+    </div>
+    <div class="stack">
+      <div class="row"><label for="sMax" data-i="secondMax"></label><span class="stepper"><button type="button" class="step" data-for="sMax" data-step="-10">-10</button><input id="sMaxOut" class="num" type="number" min="-10000" max="10000" step="1" value="99" aria-label="Second number, max"><button type="button" class="step" data-for="sMax" data-step="10">+10</button></span></div>
+      <input id="sMax" type="range" min="-10000" max="10000" step="1" value="99">
+    </div>
+    <div class="stack">
+      <div class="row"><label for="sMin" data-i="secondMin"></label><span class="stepper"><button type="button" class="step" data-for="sMin" data-step="-10">-10</button><input id="sMinOut" class="num" type="number" min="-10000" max="10000" step="1" value="0" aria-label="Second number, min"><button type="button" class="step" data-for="sMin" data-step="10">+10</button></span></div>
+      <input id="sMin" type="range" min="-10000" max="10000" step="1" value="0">
+    </div>
+  </div>
+
+  <h2 data-i="negatives"></h2>
+  <div class="card">
+    <div class="row"><label for="onlyF" data-i="onlyNegFirst"></label><input id="onlyF" class="switch" type="checkbox" role="switch"></div>
+    <div class="row"><label for="onlyS" data-i="onlyNegSecond"></label><input id="onlyS" class="switch" type="checkbox" role="switch"></div>
+    <div class="row"><label for="allowRes" data-i="allowNegResult"></label><input id="allowRes" class="switch" type="checkbox" role="switch" checked></div>
+  </div>
+
+  <h2 data-i="voicePacing"></h2>
+  <div class="card">
+    <div class="stack">
+      <div class="row"><label for="pace" data-i="pauseLabel"></label><span class="val" id="paceOut">420 ms</span></div>
+      <input id="pace" type="range" min="0" max="3000" step="10" value="420">
+      <p class="sub" data-i="pacingCaption"></p>
+    </div>
+  </div>
+
+  <h2 data-i="responseMode"></h2>
+  <div class="card">
+    <div class="seg" role="radiogroup" aria-label="Response mode">
+      <label><input type="radio" name="mode" value="voice"><span data-i="voiceOnly"></span></label>
+      <label><input type="radio" name="mode" value="written" checked><span data-i="writtenOnly"></span></label>
+    </div>
+    <p class="sub" data-i="lockedNote"></p>
+  </div>
+
+  <h2 data-i="sessionLength"></h2>
+  <div class="card">
+    <div class="row">
+      <label for="target" data-i="targetCorrect"></label>
+      <select id="target">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </div>
+
+  <p id="note" class="note" role="alert"></p>
+  <button id="start" class="btn primary" data-i="startSession"></button>
+</main>
+
+<!-- TRAINING -->
+<main id="training" class="screen" hidden>
+  <div class="bar">
+    <button id="endBtn" class="link" data-i="end"></button>
+    <span id="count" class="count"></span>
+    <span id="modeTag" class="tag"></span>
+  </div>
+  <progress id="prog" max="10" value="0"></progress>
+
+  <div class="card problem">
+    <p class="cap" data-i="problem"></p>
+    <p id="equation" class="eq" aria-live="off">&nbsp;</p>
+  </div>
+
+  <section id="writtenArea">
+    <div id="answerBox" class="answer" aria-label="Answer">&nbsp;</div>
+    <p id="fb" class="fb" aria-live="polite"></p>
+    <div class="keypad">
+      <button class="key" data-k="1">1</button>
+      <button class="key" data-k="2">2</button>
+      <button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button>
+      <button class="key" data-k="5">5</button>
+      <button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button>
+      <button class="key" data-k="8">8</button>
+      <button class="key" data-k="9">9</button>
+      <button class="key fn" data-k="-" aria-label="-">-</button>
+      <button class="key" data-k="0">0</button>
+      <button class="key fn" data-k="del" aria-label="Delete">&#9003;</button>
+    </div>
+  </section>
+
+  <section id="voiceArea" class="voice" hidden>
+    <div class="orb" aria-hidden="true">
+      <div class="ring"></div>
+      <div class="mic">
+        <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+      </div>
+    </div>
+    <div class="wave" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+    <p class="say" data-i="sayAnswer"></p>
+    <p id="heard" class="sub" aria-live="polite"></p>
+    <button id="repeatBtn" class="btn" data-i="repeatQuestion"></button>
+  </section>
+</main>
+
+<!-- SUMMARY -->
+<main id="summary" class="screen" hidden>
+  <p class="eyebrow" data-i="sessionComplete"></p>
+  <h1 data-i="wellDone"></h1>
+  <div class="card rating">
+    <div id="medal" class="medal" aria-hidden="true"></div>
+    <div>
+      <p class="cap" data-i="rating"></p>
+      <p id="ratingName" class="big"></p>
+      <p id="ratingSub" class="sub"></p>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="card"><span class="cap" data-i="totalTime"></span><span id="sTime" class="num"></span></div>
+    <div class="card"><span class="cap" data-i="correct"></span><span id="sCorrect" class="num"></span></div>
+    <div class="card"><span class="cap" data-i="accuracy"></span><span id="sAcc" class="num"></span></div>
+    <div class="card"><span class="cap" data-i="averagePerAnswer"></span><span id="sAvg" class="num"></span></div>
+  </div>
+  <div class="card">
+    <p class="cap" data-i="timePerAnswer"></p>
+    <div id="bars" class="bars" role="img" aria-label="Seconds per correct answer"></div>
+  </div>
+  <div class="card" id="missedCard">
+    <p class="cap" data-i="missed"></p>
+    <ul id="missed" class="missed"></ul>
+  </div>
+  <p class="sub" data-i="ratingCriteria"></p>
+  <div class="actions">
+    <button id="again" class="btn primary" data-i="trainAgain"></button>
+    <button id="settings" class="btn" data-i="changeSettings"></button>
+  </div>
+</main>
+
+<script>
+/* ---------- Languages and texts ---------- */
+const LANG = {
+  en: { tag: 'en-US', minus: 'minus', plus: 'plus' },
+  it: { tag: 'it-IT', minus: 'meno', plus: 'più' },
+  fr: { tag: 'fr-FR', minus: 'moins', plus: 'plus' },
+  es: { tag: 'es-ES', minus: 'menos', plus: 'más' },
+};
+
+const STR = {
+  en: {
+    eyebrow: 'Configuration', appTitle: 'MentalMath', language: 'Language', operations: 'Operations',
+    addition: 'Addition', subtraction: 'Subtraction', mixed: 'Mixed', mixedHint: 'Mixed picks + or - at random.',
+    numberRange: 'Number range', firstMax: 'First number, max', firstMin: 'First number, min',
+    secondMax: 'Second number, max', secondMin: 'Second number, min', negatives: 'Negative numbers',
+    allowNegFirst: 'Allow negative first operand', allowNegSecond: 'Allow negative second operand',
+    onlyNegFirst: 'Only negative first operand', onlyNegSecond: 'Only negative second operand',
+    allowNegResult: 'Allow negative results', voicePacing: 'Voice pacing', pauseLabel: 'Pause between digit groups',
+    pacingCaption: 'Delay between tens, hundreds and units when numbers are read aloud.',
+    responseMode: 'Response mode', voiceOnly: 'Voice only', writtenOnly: 'Written only',
+    lockedNote: "Locked for the whole session. You can't switch mid-session.", sessionLength: 'Session length',
+    targetCorrect: 'Target correct answers', startSession: 'Start session',
+    invalidRange: 'Check the ranges: a minimum is above its maximum, or the negative settings leave no valid values.',
+    micUnavailable: 'Microphone or speech recognition is not allowed. Allow it in the browser to use voice mode.',
+    noVoiceSupport: 'This browser has no speech recognition. Use Chrome for voice mode.',
+    end: 'End', correctOf: '%d of %d correct', problem: 'Problem', sayAnswer: 'Say the answer out loud.',
+    heardPrefix: 'Heard:', repeatQuestion: 'Repeat question', typeAnswer: 'Type the answer. A correct answer moves on instantly.',
+    correctNext: 'Correct', wrongRetry: 'Not quite. Try again.', sessionComplete: 'Session complete', wellDone: 'Well done',
+    rating: 'Rating', correct: 'Correct', totalTime: 'Total time', accuracy: 'Accuracy',
+    averagePerAnswer: 'Average per answer', timePerAnswer: 'Time per correct answer',
+    ratingCriteria: 'Rating uses accuracy and average time. Expert: 95%+ and under 10 s. Sharp: 90%+ and under 15 s. Steady: 75%+. Practice: below 75%.',
+    missed: 'Missed operations', yourAnswer: 'Your answer', correctAnswer: 'Correct answer',
+    trainAgain: 'Train again', changeSettings: 'Change settings',
+    practice: 'Practice', steady: 'Steady', sharp: 'Sharp', expert: 'Expert', written: 'Written', voice: 'Voice',
+  },
+  it: {
+    eyebrow: 'Configurazione', appTitle: 'MentalMath', language: 'Lingua', operations: 'Operazioni',
+    addition: 'Addizione', subtraction: 'Sottrazione', mixed: 'Misto', mixedHint: 'Misto sceglie + o - a caso.',
+    numberRange: 'Intervallo numeri', firstMax: 'Primo numero, max', firstMin: 'Primo numero, min',
+    secondMax: 'Secondo numero, max', secondMin: 'Secondo numero, min', negatives: 'Numeri negativi',
+    allowNegFirst: 'Consenti primo operando negativo', allowNegSecond: 'Consenti secondo operando negativo',
+    onlyNegFirst: 'Solo primo operando negativo', onlyNegSecond: 'Solo secondo operando negativo',
+    allowNegResult: 'Consenti risultati negativi', voicePacing: 'Ritmo vocale', pauseLabel: 'Pausa tra gruppi di cifre',
+    pacingCaption: 'Ritardo tra decine, centinaia e unità quando i numeri vengono letti ad alta voce.',
+    responseMode: 'Modalità di risposta', voiceOnly: 'Solo voce', writtenOnly: 'Solo scritto',
+    lockedNote: 'Bloccata per tutta la sessione. Non si può cambiare a metà.', sessionLength: 'Durata sessione',
+    targetCorrect: 'Risposte corrette richieste', startSession: 'Inizia sessione',
+    invalidRange: 'Controlla gli intervalli: un minimo supera il massimo, oppure le impostazioni negative non lasciano valori validi.',
+    micUnavailable: 'Microfono o riconoscimento vocale non consentiti. Consentili nel browser per la modalità voce.',
+    noVoiceSupport: 'Questo browser non ha il riconoscimento vocale. Usa Chrome per la modalità voce.',
+    end: 'Fine', correctOf: '%d su %d corrette', problem: 'Calcolo', sayAnswer: 'Dì la risposta ad alta voce.',
+    heardPrefix: 'Sentito:', repeatQuestion: 'Ripeti domanda', typeAnswer: 'Scrivi la risposta. Una risposta giusta passa subito avanti.',
+    correctNext: 'Corretto', wrongRetry: 'Non esatto. Riprova.', sessionComplete: 'Sessione completata', wellDone: 'Ben fatto',
+    rating: 'Valutazione', correct: 'Corrette', totalTime: 'Tempo totale', accuracy: 'Precisione',
+    averagePerAnswer: 'Media per risposta', timePerAnswer: 'Tempo per risposta corretta',
+    ratingCriteria: 'La valutazione usa precisione e tempo medio. Esperto: 95%+ e sotto 10 s. Rapido: 90%+ e sotto 15 s. Costante: 75%+. Pratica: sotto il 75%.',
+    missed: 'Operazioni sbagliate', yourAnswer: 'La tua risposta', correctAnswer: 'Risposta corretta',
+    trainAgain: 'Allenati ancora', changeSettings: 'Cambia impostazioni',
+    practice: 'Pratica', steady: 'Costante', sharp: 'Rapido', expert: 'Esperto', written: 'Scritto', voice: 'Voce',
+  },
+  fr: {
+    eyebrow: 'Configuration', appTitle: 'MentalMath', language: 'Langue', operations: 'Opérations',
+    addition: 'Addition', subtraction: 'Soustraction', mixed: 'Mixte', mixedHint: 'Mixte choisit + ou - au hasard.',
+    numberRange: 'Plage de nombres', firstMax: 'Premier nombre, max', firstMin: 'Premier nombre, min',
+    secondMax: 'Second nombre, max', secondMin: 'Second nombre, min', negatives: 'Nombres négatifs',
+    allowNegFirst: 'Autoriser premier opérande négatif', allowNegSecond: 'Autoriser second opérande négatif',
+    onlyNegFirst: 'Premier opérande négatif uniquement', onlyNegSecond: 'Second opérande négatif uniquement',
+    allowNegResult: 'Autoriser résultats négatifs', voicePacing: 'Rythme vocal', pauseLabel: 'Pause entre groupes de chiffres',
+    pacingCaption: 'Délai entre dizaines, centaines et unités à la lecture à voix haute.',
+    responseMode: 'Mode de réponse', voiceOnly: 'Voix seule', writtenOnly: 'Écrit seul',
+    lockedNote: 'Verrouillé pour toute la session. Impossible de changer en cours de route.', sessionLength: 'Durée de la session',
+    targetCorrect: 'Bonnes réponses visées', startSession: 'Commencer la session',
+    invalidRange: 'Vérifiez les plages : un minimum dépasse son maximum, ou les réglages négatifs ne laissent aucune valeur.',
+    micUnavailable: 'Microphone ou reconnaissance vocale non autorisés. Autorisez-les dans le navigateur pour le mode voix.',
+    noVoiceSupport: 'Ce navigateur ne propose pas la reconnaissance vocale. Utilisez Chrome pour le mode voix.',
+    end: 'Fin', correctOf: '%d sur %d correctes', problem: 'Calcul', sayAnswer: 'Dites la réponse à voix haute.',
+    heardPrefix: 'Entendu :', repeatQuestion: 'Répéter la question', typeAnswer: 'Tapez la réponse. Une bonne réponse passe tout de suite à la suite.',
+    correctNext: 'Correct', wrongRetry: 'Pas tout à fait. Réessayez.', sessionComplete: 'Session terminée', wellDone: 'Bravo',
+    rating: 'Évaluation', correct: 'Correctes', totalTime: 'Temps total', accuracy: 'Précision',
+    averagePerAnswer: 'Moyenne par réponse', timePerAnswer: 'Temps par bonne réponse',
+    ratingCriteria: "L'évaluation tient compte de la précision et du temps moyen. Expert : 95 % et plus, moins de 10 s. Vif : 90 % et plus, moins de 15 s. Régulier : 75 % et plus. Entraînement : moins de 75 %.",
+    missed: 'Opérations manquées', yourAnswer: 'Votre réponse', correctAnswer: 'Bonne réponse',
+    trainAgain: 'Recommencer', changeSettings: 'Modifier les réglages',
+    practice: 'Entraînement', steady: 'Régulier', sharp: 'Vif', expert: 'Expert', written: 'Écrit', voice: 'Voix',
+  },
+  es: {
+    eyebrow: 'Configuración', appTitle: 'MentalMath', language: 'Idioma', operations: 'Operaciones',
+    addition: 'Suma', subtraction: 'Resta', mixed: 'Mixto', mixedHint: 'Mixto elige + o - al azar.',
+    numberRange: 'Rango de números', firstMax: 'Primer número, máx.', firstMin: 'Primer número, mín.',
+    secondMax: 'Segundo número, máx.', secondMin: 'Segundo número, mín.', negatives: 'Números negativos',
+    allowNegFirst: 'Permitir primer operando negativo', allowNegSecond: 'Permitir segundo operando negativo',
+    onlyNegFirst: 'Solo primer operando negativo', onlyNegSecond: 'Solo segundo operando negativo',
+    allowNegResult: 'Permitir resultados negativos', voicePacing: 'Ritmo de voz', pauseLabel: 'Pausa entre grupos de cifras',
+    pacingCaption: 'Retardo entre decenas, centenas y unidades al leer los números en voz alta.',
+    responseMode: 'Modo de respuesta', voiceOnly: 'Solo voz', writtenOnly: 'Solo escrito',
+    lockedNote: 'Bloqueado durante toda la sesión. No se puede cambiar a mitad.', sessionLength: 'Duración de la sesión',
+    targetCorrect: 'Respuestas correctas objetivo', startSession: 'Empezar sesión',
+    invalidRange: 'Revisa los rangos: un mínimo supera su máximo, o los ajustes negativos no dejan valores válidos.',
+    micUnavailable: 'Micrófono o reconocimiento de voz no permitidos. Permítelos en el navegador para el modo voz.',
+    noVoiceSupport: 'Este navegador no tiene reconocimiento de voz. Usa Chrome para el modo voz.',
+    end: 'Fin', correctOf: '%d de %d correctas', problem: 'Cálculo', sayAnswer: 'Di la respuesta en voz alta.',
+    heardPrefix: 'Oído:', repeatQuestion: 'Repetir pregunta', typeAnswer: 'Escribe la respuesta. Una respuesta correcta avanza al instante.',
+    correctNext: 'Correcto', wrongRetry: 'No es exacto. Inténtalo de nuevo.', sessionComplete: 'Sesión completada', wellDone: 'Muy bien',
+    rating: 'Valoración', correct: 'Correctas', totalTime: 'Tiempo total', accuracy: 'Precisión',
+    averagePerAnswer: 'Media por respuesta', timePerAnswer: 'Tiempo por respuesta correcta',
+    ratingCriteria: 'La valoración usa precisión y tiempo medio. Experto: 95%+ y menos de 10 s. Ágil: 90%+ y menos de 15 s. Constante: 75%+. Práctica: menos del 75%.',
+    missed: 'Operaciones falladas', yourAnswer: 'Tu respuesta', correctAnswer: 'Respuesta correcta',
+    trainAgain: 'Entrenar otra vez', changeSettings: 'Cambiar ajustes',
+    practice: 'Práctica', steady: 'Constante', sharp: 'Ágil', expert: 'Experto', written: 'Escrito', voice: 'Voz',
+  },
+};
+
+let lang = 'en';
+const $ = (id) => document.getElementById(id);
+const t = (k) => (STR[lang][k] ?? STR.en[k] ?? k);
+
+/* ---------- Spelling out numbers (no libraries) ---------- */
+const UNITS = {
+  en: ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'],
+  it: ['zero','uno','due','tre','quattro','cinque','sei','sette','otto','nove','dieci','undici','dodici','tredici','quattordici','quindici','sedici','diciassette','diciotto','diciannove'],
+  fr: ['zero','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'],
+  es: ['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciseis','diecisiete','dieciocho','diecinueve'],
+};
+const TENS = {
+  en: ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'],
+  it: ['','','venti','trenta','quaranta','cinquanta','sessanta','settanta','ottanta','novanta'],
+  fr: ['','','vingt','trente','quarante','cinquante','soixante'],
+  es: ['','','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'],
+};
+const ES21 = ['','veintiuno','veintidos','veintitres','veinticuatro','veinticinco','veintiseis','veintisiete','veintiocho','veintinueve'];
+const ES_HUND = ['','','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+
+function twoDigits(n, c) {
+  const tens = Math.floor(n / 10), u = n % 10, U = UNITS[c];
+  switch (c) {
+    case 'en': return TENS.en[tens] + (u ? '-' + U[u] : '');
+    case 'it': {
+      const base = TENS.it[tens];
+      if (!u) return base;
+      return (u === 1 || u === 8) ? base.slice(0, -1) + U[u] : base + U[u];
+    }
+    case 'fr': {
+      if (n < 70) {
+        const base = TENS.fr[tens];
+        if (!u) return base;
+        if (u === 1 && tens >= 2 && tens <= 6) return base + ' et un';
+        return base + '-' + U[u];
+      }
+      if (n < 80) return 'soixante' + (n - 60 === 11 ? ' et onze' : '-' + U[n - 60]);
+      const rest = n - 80;
+      return rest ? 'quatre-vingt-' + U[rest] : 'quatre-vingts';
+    }
+    case 'es':
+      if (tens === 2 && u) return ES21[u];
+      return u ? TENS.es[tens] + ' y ' + U[u] : TENS.es[tens];
+  }
+}
+
+function words(n, c) {
+  const U = UNITS[c];
+  if (n < 20) return U[n];
+  if (n < 100) return twoDigits(n, c);
+  if (n < 1000) {
+    const h = Math.floor(n / 100), r = n % 100;
+    const rest = r ? words(r, c) : '';
+    switch (c) {
+      case 'en': return U[h] + ' hundred' + (r ? ' ' + rest : '');
+      case 'it': return (h === 1 ? 'cento' : U[h] + 'cento') + rest;
+      case 'fr': return (h === 1 ? 'cent' : U[h] + ' cent' + (r ? '' : 's')) + (r ? ' ' + rest : '');
+      case 'es': return h === 1 ? (r ? 'ciento ' + rest : 'cien') : ES_HUND[h] + (r ? ' ' + rest : '');
+    }
+  }
+  const k = Math.floor(n / 1000), r = n % 1000;
+  const rest = r ? words(r, c) : '';
+  switch (c) {
+    case 'en': return words(k, c) + ' thousand' + (r ? ' ' + rest : '');
+    case 'it': return (k === 1 ? 'mille' : words(k, c) + 'mila') + rest;
+    case 'fr': return (k === 1 ? 'mille' : words(k, c) + ' mille') + (r ? ' ' + rest : '');
+    case 'es': return (k === 1 ? 'mil' : words(k, c) + ' mil') + (r ? ' ' + rest : '');
+  }
+}
+
+/* Splits a non-negative number into hundreds, tens and units groups: 56 -> [50, 6].
+   The teens 11 to 19 are kept as one word: 15 -> [15], 115 -> [100, 15]. */
+function groups(value) {
+  if (value <= 0) return [0];
+  const out = [];
+  const high = Math.floor(value / 100) * 100;
+  const rest = value % 100;
+  if (high > 0) out.push(high);
+  // French 71-79 and 91-99: "soixante" or "quatre-vingt" first, then the 11-19 word (75 = soixante | quinze).
+  if (lang === 'fr' && ((rest >= 71 && rest <= 79) || (rest >= 91 && rest <= 99))) {
+    out.push(rest < 80 ? 60 : 80, rest % 10 + 10);
+    return out;
+  }
+  if (rest >= 11 && rest <= 19) { out.push(rest); return out; }
+  const tens = Math.floor(rest / 10) * 10;
+  const units = rest % 10;
+  if (tens > 0) out.push(tens);
+  if (units > 0) out.push(units);
+  return out;
+}
+
+/* ---------- Speech ---------- */
+let presentToken = 0;
+
+function voiceFor(tag) {
+  const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+  return voices.find(v => v.lang === tag) || voices.find(v => v.lang.startsWith(tag.slice(0, 2))) || null;
+}
+
+/* First operand: spoken as one phrase, never split, so no pacing pause. */
+function wholeParts(value) {
+  const L = LANG[lang];
+  const out = [];
+  if (value < 0) out.push({ text: L.minus, pause: 0.15 });
+  out.push({ text: words(Math.abs(value), lang), pause: 0 });
+  return out;
+}
+
+/* Second operand: split into hundreds, tens and units, with the digit pause between the groups. */
+function partsFor(value, pauseSec) {
+  const L = LANG[lang];
+  const out = [];
+  if (value < 0) out.push({ text: L.minus, pause: 0.15 });
+  const gs = groups(Math.abs(value));
+  gs.forEach((g, i) => {
+    let text = words(g, lang);
+    if (lang === 'fr' && g === 80 && i < gs.length - 1) text = 'quatre-vingt';   // 91: quatre-vingt | onze
+    if (lang === 'fr' && g === 11 && i > 0 && gs[i - 1] === 60) text = 'et onze'; // 71: soixante | et onze
+    out.push({ text, pause: i < gs.length - 1 ? pauseSec : 0 });
+  });
+  return out;
+}
+
+function problemParts(p, pauseSec) {
+  const L = LANG[lang];
+  const op = { text: p.op === '+' ? L.plus : L.minus, pause: 0.4 };
+  return [...wholeParts(p.a), op, ...partsFor(p.b, pauseSec)];
+}
+
+/* Speaks each part, then waits its pause. Stops early when the token changes. */
+function speakParts(parts, token) {
+  return new Promise(resolve => {
+    let i = 0;
+    const next = () => {
+      if (token !== presentToken || i >= parts.length) { resolve(); return; }
+      const part = parts[i++];
+      const u = new SpeechSynthesisUtterance(part.text);
+      u.lang = LANG[lang].tag;
+      const v = voiceFor(LANG[lang].tag);
+      if (v) u.voice = v;
+      u.rate = 0.9;
+      const after = () => setTimeout(next, part.pause * 1000);
+      u.onend = after;
+      u.onerror = after;
+      speechSynthesis.speak(u);
+    };
+    next();
+  });
+}
+
+/* ---------- Sound cues: generated in the browser, no files. Kept quieter than the voice. ---------- */
+let actx = null;
+
+function ensureAudio() {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  } catch (e) { actx = null; }
+}
+
+function tone(freq, start, dur, peak, type) {
+  if (!actx) return;
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  const t0 = actx.currentTime + start;
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gain).connect(actx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+
+/* Wrong answer: two soft, falling notes. */
+function playWrong() {
+  tone(262, 0, 0.1, 0.035, 'triangle');
+  tone(220, 0.1, 0.14, 0.035, 'triangle');
+}
+
+/* End of session: a short rising arpeggio that settles into a chord. */
+function playDone() {
+  tone(523.25, 0, 0.3, 0.06, 'sine');
+  tone(659.25, 0.12, 0.3, 0.06, 'sine');
+  tone(783.99, 0.24, 0.3, 0.06, 'sine');
+  [523.25, 659.25, 783.99].forEach(f => tone(f, 0.4, 1.0, 0.04, 'sine'));
+}
+
+/* ---------- Speech recognition ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let recog = null;
+
+function stopListen() {
+  if (recog) {
+    recog.onresult = recog.onend = recog.onerror = null;
+    try { recog.abort(); } catch (e) { /* already stopped */ }
+    recog = null;
+  }
+}
+
+function startRecognition(callback) {
+  let finished = false;
+  const done = (alts) => { if (!finished) { finished = true; callback(alts); } };
+  recog = new SR();
+  recog.lang = LANG[lang].tag;
+  recog.interimResults = false;
+  recog.maxAlternatives = 3;
+  recog.onresult = (e) => {
+    const res = e.results[e.results.length - 1];
+    const alts = [];
+    for (let i = 0; i < res.length; i++) alts.push(res[i].transcript);
+    $('heard').textContent = t('heardPrefix') + ' ' + (alts[0] || '');
+    done(alts);
+  };
+  recog.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      stopListen();
+      $('note').textContent = t('micUnavailable');
+      finish();
+    } else {
+      done([]);
+    }
+  };
+  recog.onend = () => done([]);
+  try { recog.start(); } catch (e) { done([]); }
+}
+
+/* Reads "29", "-5", "meno cinque", "twenty nine" ... into an integer. */
+const wordMaps = {};
+function wordMap(c) {
+  if (wordMaps[c]) return wordMaps[c];
+  const m = new Map();
+  for (let n = -10000; n <= 10000; n++) {
+    if (n === 0) { m.set(UNITS[c][0], 0); continue; }
+    const w = words(Math.abs(n), c).replace(/-/g, ' ');
+    const label = (n < 0 ? LANG[c].minus + ' ' : '') + w;
+    m.set(label, n);
+    if (n < 0) m.set(w, n);
+  }
+  wordMaps[c] = m;
+  return m;
+}
+
+function parseSpoken(text) {
+  const L = LANG[lang];
+  let b = text.trim().toLowerCase().replace(/\s+/g, ' ');
+  let sign = 1;
+  for (const marker of [L.minus.toLowerCase(), '-', '−']) {
+    if (b.startsWith(marker)) { sign = -1; b = b.slice(marker.length).trim(); break; }
+  }
+  if (!b) return null;
+  if (/\d/.test(b)) {
+    const digits = b.replace(/\D/g, '');
+    return digits ? sign * parseInt(digits, 10) : null;
+  }
+  const value = wordMap(lang).get(b.replace(/-/g, ' '));
+  return value === undefined ? null : (sign < 0 && value > 0 ? -value : value);
+}
+
+/* ---------- Problems ---------- */
+function operandRange(cfg, first) {
+  let lo = first ? cfg.fMin : cfg.sMin;
+  let hi = first ? cfg.fMax : cfg.sMax;
+  const allow = first ? cfg.allowF : cfg.allowS;
+  const only = first ? cfg.onlyF : cfg.onlyS;
+  if (only) hi = Math.min(hi, -1);
+  else if (!allow) lo = Math.max(lo, 0);
+  return lo <= hi ? [lo, hi] : null;
+}
+
+const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+
+function generate(cfg) {
+  const r1 = operandRange(cfg, true), r2 = operandRange(cfg, false);
+  if (!r1 || !r2) return null;
+  for (let i = 0; i < 500; i++) {
+    const op = cfg.op === 'addition' ? '+' : cfg.op === 'subtraction' ? '-' : (Math.random() < 0.5 ? '+' : '-');
+    const a = rnd(r1[0], r1[1]), b = rnd(r2[0], r2[1]);
+    const ans = op === '+' ? a + b : a - b;
+    if (cfg.allowRes || ans >= 0) return { a, b, op };
+  }
+  return null;
+}
+
+const answerOf = (p) => (p.op === '+' ? p.a + p.b : p.a - p.b);
+
+/* ---------- Setup ---------- */
+function readConfig() {
+  return {
+    op: document.querySelector('input[name="op"]:checked').value,
+    fMin: +$('fMin').value, fMax: +$('fMax').value,
+    sMin: +$('sMin').value, sMax: +$('sMax').value,
+    allowF: false, onlyF: $('onlyF').checked,
+    allowS: false, onlyS: $('onlyS').checked,
+    allowRes: $('allowRes').checked,
+    pause: +$('pace').value,
+    mode: document.querySelector('input[name="mode"]:checked').value,
+    target: +$('target').value,
+  };
+}
+
+function updateSetup() {
+  for (const id of ['fMax', 'fMin', 'sMax', 'sMin']) {
+    const box = $(id + 'Out');
+    if (document.activeElement !== box) box.value = $(id).value;
+  }
+  $('paceOut').textContent = $('pace').value + ' ms';
+  const cfg = readConfig();
+  const valid = operandRange(cfg, true) && operandRange(cfg, false);
+  const noVoice = cfg.mode === 'voice' && !SR;
+  $('start').disabled = !valid || noVoice;
+  $('note').textContent = !valid ? t('invalidRange') : noVoice ? t('noVoiceSupport') : '';
+}
+
+function applyLang() {
+  document.documentElement.lang = LANG[lang].tag.slice(0, 2);
+  document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
+  document.title = t('appTitle');
+  $('lang').value = lang;
+  updateSetup();
+  if (!$('training').hidden) renderTraining();
+  if (!$('summary').hidden && S) renderSummary();
+}
+
+/* ---------- Session ---------- */
+let S = null;
+
+function show(id) {
+  ['setup', 'training', 'summary'].forEach(s => { $(s).hidden = s !== id; });
+  window.scrollTo(0, 0);
+}
+
+function startSession() {
+  ensureAudio();
+  const cfg = readConfig();
+  if (!(operandRange(cfg, true) && operandRange(cfg, false))) return;
+  if (cfg.mode === 'voice' && !SR) return;
+  if (cfg.mode === 'voice' && navigator.mediaDevices) {
+    // Ask for the microphone once, when the session starts, instead of before every question.
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((stream) => { stream.getTracks().forEach(track => track.stop()); beginSession(cfg); })
+      .catch(() => { $('note').textContent = t('micUnavailable'); });
+    return;
+  }
+  beginSession(cfg);
+}
+
+function beginSession(cfg) {
+  S = { cfg, attempts: [], correct: 0, prob: null, typed: '', neg: false, phase: 'speaking',
+        pStart: null, sStart: Date.now(), done: false, elapsed: 0 };
+  $('note').textContent = '';
+  $('modeTag').textContent = cfg.mode === 'written' ? t('written') : t('voice');
+  $('voiceArea').hidden = cfg.mode !== 'voice';
+  $('writtenArea').hidden = cfg.mode !== 'written';
+  $('prog').max = cfg.target;
+  show('training');
+  renderTraining();
+  nextProblem();
+}
+
+function renderTraining() {
+  $('count').textContent = S ? `${t('correctOf')}`.replace('%d', S.correct).replace('%d', S.cfg.target) : '';
+  $('prog').value = S ? S.correct : 0;
+  $('equation').textContent = S && S.prob
+    ? `${S.prob.a} ${S.prob.op === '+' ? '+' : '-'} ${S.prob.b} =`
+    : ' ';
+  renderTyped();
+}
+
+function renderTyped() {
+  $('answerBox').textContent = S && (S.typed || S.neg) ? (S.neg ? '-' : '') + S.typed : ' ';
+}
+
+function nextProblem() {
+  if (S.correct >= S.cfg.target) { playDone(); finish(); return; }
+  const p = generate(S.cfg);
+  if (!p) { $('note').textContent = t('invalidRange'); finish(); return; }
+  S.prob = p;
+  S.typed = ''; S.neg = false; S.pStart = null; S.phase = 'speaking';
+  $('fb').textContent = '';
+  renderTraining();
+  present();
+}
+
+async function present() {
+  const my = ++presentToken;
+  stopListen();
+  S.phase = 'speaking';
+  const pauseSec = S.cfg.pause / 1000;
+  await speakParts(problemParts(S.prob, pauseSec), my);
+  if (my !== presentToken || S.done) return;
+  if (!S.pStart) S.pStart = Date.now();
+  S.phase = 'awaiting';
+  if (S.cfg.mode === 'voice') listenLoop(my);
+}
+
+function listenLoop(my) {
+  if (my !== presentToken || S.done) return;
+  startRecognition((alts) => {
+    if (my !== presentToken || S.done || S.phase !== 'awaiting') return;
+    const expected = answerOf(S.prob);
+    const parsed = alts.map(parseSpoken).filter(v => v !== null);
+    if (!parsed.length) { setTimeout(() => listenLoop(my), 400); return; }
+    record(parsed.includes(expected) ? expected : parsed[0]);
+  });
+}
+
+function record(value) {
+  stopListen();
+  const ok = value === answerOf(S.prob);
+  const dur = S.pStart ? (Date.now() - S.pStart) / 1000 : 0;
+  S.attempts.push({ ok, d: dur, p: S.prob, typed: value });
+  if (ok) {
+    S.correct++;
+    S.phase = 'feedback';
+    $('fb').textContent = t('correctNext');
+    $('fb').style.color = 'var(--ok)';
+    $('prog').value = S.correct;
+    $('count').textContent = t('correctOf').replace('%d', S.correct).replace('%d', S.cfg.target);
+    if (navigator.vibrate) navigator.vibrate(10);
+    setTimeout(() => { if (!S.done) nextProblem(); }, 250);
+  } else {
+    S.typed = ''; S.neg = false;
+    renderTyped();
+    $('fb').textContent = t('wrongRetry');
+    $('fb').style.color = 'var(--bad)';
+    const box = $('answerBox');
+    box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+    if (navigator.vibrate) navigator.vibrate(20);
+    playWrong();
+    setTimeout(() => { if (!S.done) present(); }, 350);
+  }
+}
+
+function press(k) {
+  if (!S || S.done || S.phase !== 'awaiting' || S.cfg.mode !== 'written') return;
+  if (k === '-') {
+    if (!S.typed) S.neg = !S.neg;
+  } else if (k === 'del') {
+    if (S.typed) S.typed = S.typed.slice(0, -1); else S.neg = false;
+  } else {
+    if (S.typed === '0') S.typed = '';
+    S.typed += k;
+    const need = String(Math.abs(answerOf(S.prob))).length;
+    if (S.typed.length >= need) {
+      const v = +S.typed;
+      record(S.neg ? -v : v);
+      return;
+    }
+  }
+  renderTyped();
+}
+
+function finish() {
+  if (S.done) return;
+  S.done = true;
+  presentToken++;
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  stopListen();
+  S.elapsed = (Date.now() - S.sStart) / 1000;
+  renderSummary();
+  show('summary');
+}
+
+/* ---------- Summary ---------- */
+function rate() {
+  const ok = S.attempts.filter(a => a.ok);
+  if (!S.attempts.length || !ok.length) return 'practice';
+  const acc = ok.length / S.attempts.length;
+  const avg = ok.reduce((s, a) => s + a.d, 0) / ok.length;
+  if (acc >= 0.95 && avg < 10) return 'expert';
+  if (acc >= 0.90 && avg < 15) return 'sharp';
+  if (acc >= 0.75) return 'steady';
+  return 'practice';
+}
+
+function renderSummary() {
+  const ok = S.attempts.filter(a => a.ok);
+  const r = rate();
+  const acc = S.attempts.length ? Math.round(100 * ok.length / S.attempts.length) : 0;
+  const avg = ok.length ? ok.reduce((s, a) => s + a.d, 0) / ok.length : 0;
+  const total = Math.round(S.elapsed);
+  const colors = { practice: 'var(--sub)', steady: 'var(--ok)', sharp: 'var(--accent)', expert: '#E8860C' };
+  $('medal').style.background = colors[r];
+  $('medal').textContent = r === 'expert' ? 'E' : r === 'sharp' ? 'S' : r === 'steady' ? '✓' : 'P';
+  $('ratingName').textContent = t(r);
+  $('ratingSub').textContent = `${acc}% · ${avg.toFixed(1)} s`;
+  $('sTime').textContent = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  $('sCorrect').textContent = `${S.correct} / ${S.cfg.target}`;
+  $('sAcc').textContent = `${acc}%`;
+  $('sAvg').textContent = `${avg.toFixed(1)} s`;
+  const misses = S.attempts.filter(a => !a.ok);
+  $('missedCard').hidden = misses.length === 0;
+  const missedList = $('missed');
+  missedList.innerHTML = '';
+  misses.forEach(a => {
+    const li = document.createElement('li');
+    li.append(`${a.p.a} ${a.p.op === '+' ? '+' : '-'} ${a.p.b} = `);
+    const you = document.createElement('span');
+    you.className = 'miss-you';
+    you.textContent = `${t('yourAnswer')}: ${a.typed}`;
+    const right = document.createElement('span');
+    right.className = 'miss-ok';
+    right.textContent = `${t('correctAnswer')}: ${answerOf(a.p)}`;
+    li.append(you, ' · ', right);
+    missedList.appendChild(li);
+  });
+  const bars = $('bars');
+  bars.innerHTML = '';
+  const peak = Math.max(1, ...ok.map(a => a.d));
+  ok.forEach(a => {
+    const div = document.createElement('div');
+    div.style.height = Math.max(6, (a.d / peak) * 120) + 'px';
+    bars.appendChild(div);
+  });
+}
+
+/* ---------- Wiring ---------- */
+document.querySelectorAll('#setup input, #setup select').forEach(el => el.addEventListener('input', updateSetup));
+document.querySelectorAll('#setup input, #setup select').forEach(el => el.addEventListener('change', updateSetup));
+$('lang').addEventListener('change', (e) => { lang = e.target.value; applyLang(); });
+$('start').addEventListener('click', startSession);
+document.querySelectorAll('.step').forEach(btn => btn.addEventListener('click', () => {
+  const range = $(btn.dataset.for);
+  range.value = Math.max(-10000, Math.min(10000, +range.value + +btn.dataset.step));
+  updateSetup();
+}));
+['fMax', 'fMin', 'sMax', 'sMin'].forEach(id => $(id + 'Out').addEventListener('change', () => {
+  const box = $(id + 'Out');
+  $(id).value = Math.max(-10000, Math.min(10000, Math.round(+box.value) || 0));
+  updateSetup();
+}));
+$('endBtn').addEventListener('click', () => finish());
+$('repeatBtn').addEventListener('click', () => {
+  if (!S || S.done || S.phase !== 'awaiting') return;
+  stopListen();
+  present();
+});
+$('again').addEventListener('click', startSession);
+$('settings').addEventListener('click', () => { S = null; show('setup'); updateSetup(); });
+document.querySelectorAll('.key').forEach(btn => btn.addEventListener('click', () => press(btn.dataset.k)));
+document.addEventListener('keydown', (e) => {
+  if ($('training').hidden || !S || S.cfg.mode !== 'written') return;
+  if (/^[0-9]$/.test(e.key)) press(e.key);
+  else if (e.key === '-') press('-');
+  else if (e.key === 'Backspace') { e.preventDefault(); press('del'); }
+});
+
+/* Start on the stored language, if the browser prefers a supported one. */
+(function init() {
+  const pref = (navigator.language || 'en').slice(0, 2);
+  lang = STR[pref] ? pref : 'en';
+  applyLang();
+  show('setup');
+})();
+</script>
+</body>
+</html>
